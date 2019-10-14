@@ -77,8 +77,25 @@ class CPU:
         #read the memory address that's stored in register `PC`
         #store that result in `IR`(Instruction Register), can be a local variable
         while running:
-            ir = self.ram[pc]
+            ir = self.ram[self.pc]
             #Using `ram_read()`,read the bytes at `PC+1` and `PC+2` from RAM into variables
             #`operand_a` and`operand_b` in case the instruction needs them.
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
+            #depending on the value of the opcode, perform the actions needed for the instruction per the LS-8 spec
+            #exit the loop if a `HLT` instruction is encountered
+            if ir == 0b00000001:
+                self.pc += 1
+                running = False
+            #LDI
+            elif ir == 0b10000010:
+                self.reg[operand_a] = operand_b
+                self.pc += 3
+            #PRN Print numeric value stored in the given register (operand_a)
+            elif ir == 0b01000111:
+                print(self.reg[operand_a])
+                self.pc += 2
+            else:
+                print(f"Unknown instruction: {ir}")
+                sys.exit(1)
+
