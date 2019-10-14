@@ -62,6 +62,16 @@ but you'll have to implement those three above instructions first!
 * Make a list of files here.
 * Write a short 3-10-word description of what each file does.
 * Note what has been implemented, and what hasn't.
+
+## File list:
+    *cpu.py - contains a CPU class with an unfinished constructor
+        a. load method has hardcoded program
+        b. alu method for arithmitic. Needs to be completed
+        c. trace method to print out the CPU state - helper notes say to run for debugging
+        d. run method needs to be completed to run the cpu
+
+    *ls8.py - currently  imports the cpu.py folder and calls cpu.load and cpu.run
+
 * Read this whole file.
 * Skim the spec.
 
