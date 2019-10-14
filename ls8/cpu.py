@@ -62,6 +62,23 @@ class CPU:
 
         print()
 
+    def ram_read(self, mar):  ## MAR(Memory Address Register - address being read or written to)
+        #get address to read - mar
+        #return the value stored there
+        return self.ram[mar]
+
+    def ram_write(self, mdr, mar):  ## MDR(Memory Data Register - data that was read or data to write)
+        #should accept a value to write (MDR), and the address to write it to(MAR)
+        self.ram[mar] = mdr
+
     def run(self):
         """Run the CPU."""
-        pass
+        running = True
+        #read the memory address that's stored in register `PC`
+        #store that result in `IR`(Instruction Register), can be a local variable
+        while running:
+            ir = self.ram[pc]
+            #Using `ram_read()`,read the bytes at `PC+1` and `PC+2` from RAM into variables
+            #`operand_a` and`operand_b` in case the instruction needs them.
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
