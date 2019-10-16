@@ -13,24 +13,45 @@ class CPU:
 
     def load(self):
         """Load a program into memory."""
+        if len(sys.argv) !=2:
+            print(f"usage: {sys.argv[0]} filename", file=sys.stderr)
+            sys.exit(1)
+        try:
+            with open(sys.argv[1]) as f:
+                address = 0
+            
+                for line in f:
+                    #process comments, ignore anything after # symbol
+                    num = line.split("#", 1)[0]
 
-        address = 0
+                    if num.strip() == '':
+                        continue
+
+                    #convert numbers from binary strings to integers
+                    self.ram_write(int(num, 2), address)
+                    address += 1
+
+        except FileNotFoundError:
+            print(f"{sys.argv[0]}: {sys.argv[1]} not found")
+            sys.exit(2)
+
+        #address = 0
 
         # For now, we've just hardcoded a program:
 
-        program = [
+        #program = [
             # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+            #0b10000010, # LDI R0,8
+            #0b00000000,
+            #0b00001000,
+            #0b01000111, # PRN R0
+            #0b00000000,
+            #0b00000001, # HLT
+        #]
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        #for instruction in program:
+            #self.ram[address] = instruction
+            #address += 1
 
 
     def alu(self, op, reg_a, reg_b):
@@ -38,7 +59,9 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        if op == "MUL":
+            product = self.reg[reg_a] * self.reg[reg_b]
+            self.reg[reg_a] = product
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -95,6 +118,10 @@ class CPU:
             elif ir == 0b01000111:
                 print(self.reg[operand_a])
                 self.pc += 2
+            #MUL send to self.alu and multiply th evalues in the two registers
+            elif ir == 0b10100010:
+                self.alu("MUL", operand_a, operand_b)
+                self.pc += 3
             else:
                 print(f"Unknown instruction: {ir}")
                 sys.exit(1)
