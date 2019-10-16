@@ -2,6 +2,10 @@
 
 import sys
 
+LDI = 0b10000010
+PRN = 0b01000111
+MUL = 0b10100010
+
 class CPU:
     """Main CPU class."""
 
@@ -10,6 +14,23 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.branchtable = {
+            LDI: self.handleLDI,
+            PRN: self.handlePRN,
+            MUL: self.handleMUL
+        }
+
+    def handleLDI(self, reg, val):
+        self.reg[reg] = val
+        self.pc += 3
+
+    def handlePRN(self, reg):
+        print(self.reg[reg])
+        self.pc += 2
+
+    def handleMUL(self, reg1, reg2):
+        self.alu("MUL", reg1, reg2)
+        self.pc += 3
 
     def load(self):
         """Load a program into memory."""
@@ -111,17 +132,14 @@ class CPU:
                 self.pc += 1
                 running = False
             #LDI
-            elif ir == 0b10000010:
-                self.reg[operand_a] = operand_b
-                self.pc += 3
+            elif ir == LDI:
+                self.handleLDI(operand_a, operand_b)
             #PRN Print numeric value stored in the given register (operand_a)
-            elif ir == 0b01000111:
-                print(self.reg[operand_a])
-                self.pc += 2
+            elif ir == PRN:
+                self.handlePRN(operand_a)
             #MUL send to self.alu and multiply th evalues in the two registers
-            elif ir == 0b10100010:
-                self.alu("MUL", operand_a, operand_b)
-                self.pc += 3
+            elif ir == MUL:
+                self.handleMUL(operand_a, operand_b)
             else:
                 print(f"Unknown instruction: {ir}")
                 sys.exit(1)
