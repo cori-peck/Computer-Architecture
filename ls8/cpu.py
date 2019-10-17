@@ -8,6 +8,7 @@ PRN = 0b01000111
 MUL = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
+HLT = 0b00000001
 
 class CPU:
     """Main CPU class."""
@@ -18,35 +19,45 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
         self.reg[SP] = 244
+        self.running = False
         self.branchtable = {
             LDI: self.handleLDI,
             PRN: self.handlePRN,
             MUL: self.handleMUL,
             PUSH: self.handlePUSH,
-            POP: self.handlePOP
+            POP: self.handlePOP,
+            HLT: self.handleHLT
         }
 
-    def handleLDI(self, reg, val):
+    def handleLDI(self, ir, reg, val):
+        bit_operands = (ir & 0b11000000) >> 6
         self.reg[reg] = val
-        self.pc += 3
+        self.pc += bit_operands + 1
 
-    def handlePRN(self, reg):
-        print(self.reg[reg])
-        self.pc += 2
+    def handlePRN(self, ir, regloc, operand):
+        bit_operands = (ir & 0b11000000) >> 6
+        print(self.reg[regloc])
+        self.pc += bit_operands + 1
 
-    def handleMUL(self, reg1, reg2):
+    def handleMUL(self, ir, reg1, reg2):
+        bit_operands = (ir & 0b11000000) >> 6
         self.alu("MUL", reg1, reg2)
-        self.pc += 3
+        self.pc += bit_operands + 1
 
-    def handlePUSH(self, regloc):
+    def handlePUSH(self, ir, regloc, operand):
+        bit_operands = (ir & 0b11000000) >> 6  #right shift operator - shift to right and append 1 at the end
         self.reg[SP] -=1
         self.ram[self.reg[SP]] = self.reg[regloc]
-        self.pc += 2
+        self.pc += bit_operands + 1
 
-    def handlePOP(self, regloc):
-        self.reg[SP] += 1
+    def handlePOP(self, ir, regloc, operand):
+        bit_operands = (ir & 0b11000000) >> 6
         self.reg[regloc] = self.ram[self.reg[SP]]
-        self.pc += 2
+        self.reg[SP] += 1
+        self.pc += bit_operands + 1
+
+    def handleHLT(self):
+        self.running = False
 
     def load(self):
         """Load a program into memory."""
@@ -133,38 +144,20 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        running = True
+        self.running = True
         #read the memory address that's stored in register `PC`
         #store that result in `IR`(Instruction Register), can be a local variable
-        while running:
+        while self.running:
             ir = self.ram[self.pc]
             #Using `ram_read()`,read the bytes at `PC+1` and `PC+2` from RAM into variables
             #`operand_a` and`operand_b` in case the instruction needs them.
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
-            #depending on the value of the opcode, perform the actions needed for the instruction per the LS-8 spec
-            #exit the loop if a `HLT` instruction is encountered
-            if ir == 0b00000001:
-                self.pc += 1
-                running = False
-            #LDI
-            elif ir == LDI:
-                self.handleLDI(operand_a, operand_b)
-            #PRN Print numeric value stored in the given register (operand_a)
-            elif ir == PRN:
-                self.handlePRN(operand_a)
-            #MUL send to self.alu and multiply th evalues in the two registers
-            elif ir == MUL:
-                self.handleMUL(operand_a, operand_b)
-            
-            elif ir == PUSH:
-                print("Push")
-                self.handlePUSH(operand_a)
 
-            elif ir == POP:
-                print("Pop")
-                self.handlePOP(operand_a)
-            else:
+            try:
+                self.branchtable[ir](ir, operand_a, operand_b)
+                
+            except:
                 print(f"Unknown instruction: {ir}")
                 sys.exit(1)
 
