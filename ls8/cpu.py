@@ -2,9 +2,12 @@
 
 import sys
 
+SP = 7   #Stack pointer is register R7
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
 
 class CPU:
     """Main CPU class."""
@@ -14,10 +17,13 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.reg[SP] = 244
         self.branchtable = {
             LDI: self.handleLDI,
             PRN: self.handlePRN,
-            MUL: self.handleMUL
+            MUL: self.handleMUL,
+            PUSH: self.handlePUSH,
+            POP: self.handlePOP
         }
 
     def handleLDI(self, reg, val):
@@ -31,6 +37,16 @@ class CPU:
     def handleMUL(self, reg1, reg2):
         self.alu("MUL", reg1, reg2)
         self.pc += 3
+
+    def handlePUSH(self, regloc):
+        self.reg[SP] -=1
+        self.ram[self.reg[SP]] = self.reg[regloc]
+        self.pc += 2
+
+    def handlePOP(self, regloc):
+        self.reg[SP] += 1
+        self.reg[regloc] = self.ram[self.reg[SP]]
+        self.pc += 2
 
     def load(self):
         """Load a program into memory."""
@@ -140,6 +156,14 @@ class CPU:
             #MUL send to self.alu and multiply th evalues in the two registers
             elif ir == MUL:
                 self.handleMUL(operand_a, operand_b)
+            
+            elif ir == PUSH:
+                print("Push")
+                self.handlePUSH(operand_a)
+
+            elif ir == POP:
+                print("Pop")
+                self.handlePOP(operand_a)
             else:
                 print(f"Unknown instruction: {ir}")
                 sys.exit(1)
