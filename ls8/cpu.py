@@ -2,33 +2,104 @@
 
 import sys
 
+SP = 7   #Stack pointer is register R7
+LDI = 0b10000010
+PRN = 0b01000111
+MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
+HLT = 0b00000001
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = [0] * 256
+        self.reg = [0] * 8
+        self.pc = 0
+        self.reg[SP] = 244
+        self.running = False
+        self.branchtable = {
+            LDI: self.handleLDI,
+            PRN: self.handlePRN,
+            MUL: self.handleMUL,
+            PUSH: self.handlePUSH,
+            POP: self.handlePOP,
+            HLT: self.handleHLT
+        }
+
+    def handleLDI(self, ir, reg, val):
+        bit_operands = (ir & 0b11000000) >> 6
+        self.reg[reg] = val
+        self.pc += bit_operands + 1
+
+    def handlePRN(self, ir, regloc, operand):
+        bit_operands = (ir & 0b11000000) >> 6
+        print(self.reg[regloc])
+        self.pc += bit_operands + 1
+
+    def handleMUL(self, ir, reg1, reg2):
+        bit_operands = (ir & 0b11000000) >> 6
+        self.alu("MUL", reg1, reg2)
+        self.pc += bit_operands + 1
+
+    def handlePUSH(self, ir, regloc, operand):
+        bit_operands = (ir & 0b11000000) >> 6  #right shift operator - shift to right and append 1 at the end
+        self.reg[SP] -=1
+        self.ram[self.reg[SP]] = self.reg[regloc]
+        self.pc += bit_operands + 1
+
+    def handlePOP(self, ir, regloc, operand):
+        bit_operands = (ir & 0b11000000) >> 6
+        self.reg[regloc] = self.ram[self.reg[SP]]
+        self.reg[SP] += 1
+        self.pc += bit_operands + 1
+
+    def handleHLT(self):
+        self.running = False
 
     def load(self):
         """Load a program into memory."""
+        if len(sys.argv) !=2:
+            print(f"usage: {sys.argv[0]} filename", file=sys.stderr)
+            sys.exit(1)
+        try:
+            with open(sys.argv[1]) as f:
+                address = 0
+            
+                for line in f:
+                    #process comments, ignore anything after # symbol
+                    num = line.split("#", 1)[0]
 
-        address = 0
+                    if num.strip() == '':
+                        continue
+
+                    #convert numbers from binary strings to integers
+                    self.ram_write(int(num, 2), address)
+                    address += 1
+
+        except FileNotFoundError:
+            print(f"{sys.argv[0]}: {sys.argv[1]} not found")
+            sys.exit(2)
+
+        #address = 0
 
         # For now, we've just hardcoded a program:
 
-        program = [
+        #program = [
             # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+            #0b10000010, # LDI R0,8
+            #0b00000000,
+            #0b00001000,
+            #0b01000111, # PRN R0
+            #0b00000000,
+            #0b00000001, # HLT
+        #]
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        #for instruction in program:
+            #self.ram[address] = instruction
+            #address += 1
 
 
     def alu(self, op, reg_a, reg_b):
@@ -36,7 +107,9 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        if op == "MUL":
+            product = self.reg[reg_a] * self.reg[reg_b]
+            self.reg[reg_a] = product
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -60,6 +133,31 @@ class CPU:
 
         print()
 
+    def ram_read(self, mar):  ## MAR(Memory Address Register - address being read or written to)
+        #get address to read - mar
+        #return the value stored there
+        return self.ram[mar]
+
+    def ram_write(self, mdr, mar):  ## MDR(Memory Data Register - data that was read or data to write)
+        #should accept a value to write (MDR), and the address to write it to(MAR)
+        self.ram[mar] = mdr
+
     def run(self):
         """Run the CPU."""
-        pass
+        self.running = True
+        #read the memory address that's stored in register `PC`
+        #store that result in `IR`(Instruction Register), can be a local variable
+        while self.running:
+            ir = self.ram[self.pc]
+            #Using `ram_read()`,read the bytes at `PC+1` and `PC+2` from RAM into variables
+            #`operand_a` and`operand_b` in case the instruction needs them.
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
+
+            try:
+                self.branchtable[ir](ir, operand_a, operand_b)
+                
+            except:
+                print(f"Unknown instruction: {ir}")
+                sys.exit(1)
+
